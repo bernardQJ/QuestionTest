@@ -1,0 +1,107 @@
+﻿@using Newtonsoft.Json;
+@using QuestionTest.Data;
+
+@page "/"
+<div style="display:@pannel" >
+    <div class="container">
+
+        @foreach (var item in elements)
+        {
+            <div class="card">
+                <div class="card-header">
+                    @((MarkupString)item.question)
+                </div>
+
+                <select class="form-control" @onchange="SelectChange">
+                    <option value="">Selecione una opción...</option>
+                    <option value="@item.id True">Verdadero</option>
+                    <option value="@item.id False">Falso</option>
+                </select>
+            </div>
+            <br/>
+        }
+
+        <div>
+            <input type="button" class="btn-block btn-info form-control" value="procesar respuestas" @onclick="ProcesQuestions" />
+        </div>
+    </div>
+
+</div>
+
+<div style="display:@display">
+    <div class="col-form-label bg-warning text-center h4">
+        Tu resultado es: @sum / @elements.Count
+    </div>
+</div>
+
+@code{
+    List<ElementsModel> elements = new List<ElementsModel>();
+    string message;
+    string display = "none";
+    string pannel = "block";
+    int sum;
+
+
+    protected override void OnInitialized()
+    {
+        sum = 0;
+
+        using (var client = new System.Net.Http.HttpClient())
+        {
+            var uri = new Uri("https://opentdb.com/api.php?amount=10&category=17&difficulty=medium&type=boolean");
+            client.BaseAddress = uri;
+            var response = client.GetAsync(uri).Result;
+
+            if (response.IsSuccessStatusCode)
+            {
+                string responseString = response.Content.ReadAsStringAsync().Result;
+                var x = JsonConvert.DeserializeObject<MatrizModel>(responseString);
+
+                var mylist = x.results;
+                CorrectAnswer(mylist);
+            }
+        }
+
+    }
+
+    private void CorrectAnswer(List<ElementsModel> list)
+    {
+        int counter = 0;
+
+         foreach (var anw in list)
+        {
+            anw.id = counter.ToString();
+            elements.Add(anw);
+
+            counter++;
+        }
+    }
+
+
+    //Solo se ejecuta cuando hago una selección
+    private void SelectChange(ChangeEventArgs e)
+    {
+        var selection = e.Value.ToString();
+        var resp = selection.Split(" ");
+
+        var a = elements.LastOrDefault(s => s.id == resp[0]);
+
+        if (a.correct_answer == resp[1])
+        {
+            sum++;
+        }
+
+    }
+
+
+    private void ProcesQuestions()
+    {
+        display = "block";
+        pannel = "none";
+    }
+
+}
+
+
+
+
